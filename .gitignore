@@ -1,0 +1,38 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+*.pyc
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment secrets — NEVER commit these
+.env
+*.env
+
+# Qdrant local storage
+qdrant_storage/
+
+# Streamlit local secrets
+.streamlit/secrets.toml
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Temp / uploads
+tmp/
+*.tmp
+
+# Jupyter
+.ipynb_checkpoints/
