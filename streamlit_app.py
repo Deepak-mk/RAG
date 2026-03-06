@@ -85,8 +85,47 @@ st.markdown("""
     transition: opacity 0.2s, transform 0.1s;
   }
   div[data-testid="stButton"] > button:hover { opacity:0.88; transform:scale(1.02); }
+
+  .login-title {
+    text-align:center; font-size:1.9rem; font-weight:700;
+    background:linear-gradient(90deg,#a78bfa,#67e8f9);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    margin-bottom:0.3rem;
+  }
+  .login-sub { text-align:center; color:#94a3b8; font-size:0.9rem; margin-bottom:2rem; }
 </style>
 """, unsafe_allow_html=True)
+
+
+# ─── Auth helpers ─────────────────────────────────────────────────────────────
+APP_USERNAME = _get_secret("APP_USERNAME") or os.getenv("APP_USERNAME", "admin")
+APP_PASSWORD = _get_secret("APP_PASSWORD") or os.getenv("APP_PASSWORD", "admin123")
+
+
+def show_login() -> None:
+    """Render the login page and handle credential verification."""
+    _, center, _ = st.columns([1, 1.4, 1])
+    with center:
+        st.markdown('<div class="login-title">📄 PDF Intelligence</div>', unsafe_allow_html=True)
+        st.markdown('<div class="login-sub">Sign in to continue</div>', unsafe_allow_html=True)
+
+        with st.form("login_form", clear_on_submit=False):
+            username = st.text_input("Username", placeholder="Enter your username")
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            submitted = st.form_submit_button("🔐 Sign In", use_container_width=True)
+
+        if submitted:
+            if username == APP_USERNAME and password == APP_PASSWORD:
+                st.session_state["authenticated"] = True
+                st.rerun()
+            else:
+                st.error("\u274c Invalid username or password. Please try again.")
+
+
+# ─── Auth gate ────────────────────────────────────────────────────────────────
+if not st.session_state.get("authenticated", False):
+    show_login()
+    st.stop()  # Nothing below renders until the user logs in
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -369,7 +408,13 @@ with col_right:
 
 # ─── Footer ───────────────────────────────────────────────────────────────────
 st.markdown("---")
-st.caption(
-    "🛠 **Stack:** LlamaIndex · Qdrant · Groq llama-3.3-70b · sentence-transformers · Streamlit"
-    + ("" if IS_CLOUD else f"  |  **FastAPI + Inngest:** [{BACKEND_URL}/docs]({BACKEND_URL}/docs)")
-)
+col_f1, col_f2 = st.columns([10, 1])
+with col_f1:
+    st.caption(
+        "🛠 **Stack:** LlamaIndex · Qdrant · Groq llama-3.3-70b · sentence-transformers · Streamlit"
+        + ("" if IS_CLOUD else f"  |  **FastAPI + Inngest:** [{BACKEND_URL}/docs]({BACKEND_URL}/docs)")
+    )
+with col_f2:
+    if st.button("🚪 Logout", key="logout_btn"):
+        st.session_state["authenticated"] = False
+        st.rerun()
