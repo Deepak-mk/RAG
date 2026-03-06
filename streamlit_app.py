@@ -270,7 +270,7 @@ with st.expander("🖥️ System Status", expanded=True):
             groq_ok = bool(GROQ_API_KEY)
             st.markdown(metric_box("Groq", "🟢 Key Set" if groq_ok else "🔴 Key Missing"), unsafe_allow_html=True)
         with s4:
-            st.markdown(metric_box("Inngest", "ℹ️ N/A in Cloud"), unsafe_allow_html=True)
+            st.markdown(metric_box("LLM Model", "🤖 llama-3.3-70b"), unsafe_allow_html=True)
     else:
         health = get_health()
         collections = get_collections()
