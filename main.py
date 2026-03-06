@@ -89,11 +89,18 @@ async def inngest_observability_middleware(request: Request, call_next):
     if path in SKIP_MONITORING_PATHS:
         return await call_next(request)
 
+    async def safe_send_event(event: inngest.Event):
+        try:
+            await inngest_client.send(event)
+        except Exception as e:
+            # Observability should never crash the main application
+            print(f"[telemetry-warning] Failed to send Inngest event {event.name}: {e}")
+
     request_id = str(uuid.uuid4())
     start_ts = time.time()
 
     # Fire: request received
-    await inngest_client.send(
+    await safe_send_event(
         inngest.Event(
             name="api/request.received",
             data={
@@ -113,7 +120,7 @@ async def inngest_observability_middleware(request: Request, call_next):
         duration_ms = round((time.time() - start_ts) * 1000, 2)
 
         # Fire: request completed
-        await inngest_client.send(
+        await safe_send_event(
             inngest.Event(
                 name="api/request.completed",
                 data={
@@ -129,7 +136,7 @@ async def inngest_observability_middleware(request: Request, call_next):
 
         # Fire: error event for 4xx / 5xx responses
         if response.status_code >= 400:
-            await inngest_client.send(
+            await safe_send_event(
                 inngest.Event(
                     name="api/request.errored",
                     data={
@@ -146,7 +153,7 @@ async def inngest_observability_middleware(request: Request, call_next):
 
     except Exception as exc:
         duration_ms = round((time.time() - start_ts) * 1000, 2)
-        await inngest_client.send(
+        await safe_send_event(
             inngest.Event(
                 name="api/request.errored",
                 data={
