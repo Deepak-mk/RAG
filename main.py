@@ -364,6 +364,13 @@ async def rag_ingest_pdf(ctx: inngest.Context, **kwargs) -> dict[str, Any]:
 
     # Step 3: Embed and upsert into Qdrant
     async def embed_and_upsert() -> dict:
+        if not chunks:
+            return RagUpsertResult(
+                source=filename,
+                chunks_upserted=0,
+                status="success",
+            ).model_dump()
+
         texts = [c["text"] for c in chunks]
         vectors = embed_text(texts)
         payloads = [
@@ -372,7 +379,7 @@ async def rag_ingest_pdf(ctx: inngest.Context, **kwargs) -> dict[str, Any]:
         ]
         count = get_db().upsert(vectors=vectors, payloads=payloads)
         return RagUpsertResult(
-            source=chunks[0]["source"] if chunks else file_path,
+            source=chunks[0]["source"],
             chunks_upserted=count,
             status="success",
         ).model_dump()
