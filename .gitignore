@@ -16,6 +16,11 @@ env/
 .env
 *.env
 
+# Local Logs
+logs/
+uvicorn.log
+inngest_fresh.log
+
 # Qdrant local storage
 qdrant_storage/
 

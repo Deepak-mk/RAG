@@ -47,31 +47,30 @@ docker-compose up -d
 
 ---
 
-## Running Locally
+## Running the RAG Pipeline
 
-Open **3 terminals** in the project folder with the venv activated:
+You can manage all background services (FastAPI, Inngest, and Streamlit) using the unified management script:
 
-**Terminal 1 — FastAPI Backend**
 ```bash
 source .venv/bin/activate
-uvicorn main:app --reload --port 8000
-```
+chmod +x services.sh
 
-**Terminal 2 — Inngest Dev Server**
-```bash
-# Point to your local FastAPI endpoint
-npx inngest-cli@latest dev -u http://127.0.0.1:8000/api/inngest
-# Dashboard: http://localhost:8288
-```
+# Start all services in the background
+./services.sh start
 
-**Terminal 3 — Streamlit UI**
-```bash
-source .venv/bin/activate
-streamlit run streamlit_app.py
-# UI: http://localhost:8501
+# Check running status
+./services.sh status
+
+# Tail logs for all services
+./services.sh logs
+
+# Stop everything
+./services.sh stop
 ```
 
 ---
+
+## Usage
 
 ## Observability & Inspection
 
