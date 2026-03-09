@@ -359,10 +359,12 @@ async def rag_ingest_pdf(ctx: inngest.Context, **kwargs) -> dict[str, Any]:
     local_path = await step.run("write-temp-file", write_temp_file)
 
     # Step 2: Load and chunk the PDF
-    chunks = await step.run(
-        "load-and-chunk",
-        lambda: load_and_chunk_pdf(local_path),
-    )
+    async def chunk_pdf() -> list[dict]:
+        raw_chunks = load_and_chunk_pdf(local_path)
+        # Inngest step outputs MUST be JSON serializable, so convert Pydantic to dicts
+        return [c.model_dump() for c in raw_chunks]
+
+    chunks = await step.run("load-and-chunk", chunk_pdf)
 
     # Step 3: Embed and upsert into Qdrant
     async def embed_and_upsert() -> dict:
