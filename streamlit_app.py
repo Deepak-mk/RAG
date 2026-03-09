@@ -210,7 +210,7 @@ def get_collections() -> list:
 
 def local_send_ingest(filename: str, file_b64: str) -> str | None:
     try:
-        r = requests.post(f"{BACKEND_URL}/api/ingest", json={"filename": filename, "file_b64": file_b64}, timeout=10)
+        r = requests.post(f"{BACKEND_URL}/api/ingest", json={"filename": filename, "file_b64": file_b64}, timeout=60)
         r.raise_for_status()
         return r.json().get("event_id")
     except Exception as e:

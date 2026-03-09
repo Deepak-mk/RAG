@@ -333,11 +333,6 @@ async def api_error_alert(ctx: inngest.Context, **kwargs) -> dict:
 @inngest_client.create_function(
     fn_id="rag-ingest-pdf",
     trigger=inngest.TriggerEvent(event="rag/ingest_pdf"),
-    rate_limit=inngest.RateLimit(
-        limit=1,
-        period=14400 * 1000,  # 4 hours in milliseconds
-        key="event.data.filename",
-    ),
 )
 async def rag_ingest_pdf(ctx: inngest.Context, **kwargs) -> dict[str, Any]:
     step = getattr(ctx, "step", kwargs.get("step"))
