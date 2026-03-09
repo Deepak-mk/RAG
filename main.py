@@ -298,12 +298,14 @@ async def api_monitor(ctx: inngest.Context, step: inngest.Step) -> dict:
     # Retry up to 3 times with exponential backoff
     retries=3,
 )
-async def api_error_alert(ctx: inngest.Context, step: inngest.Step) -> dict:
+async def api_error_alert(**kwargs) -> dict:
     """
     Triggered on any 4xx/5xx response.
     In production: send a Slack/PagerDuty alert here.
     """
-    data = ctx.event.data
+    step = kwargs["step"]
+    event = kwargs["event"]
+    data = event.data
 
     async def log_error():
         error_summary = {
@@ -332,8 +334,10 @@ async def api_error_alert(ctx: inngest.Context, step: inngest.Step) -> dict:
         key="event.data.file_path",
     ),
 )
-async def rag_ingest_pdf(ctx: inngest.Context, step: inngest.Step) -> dict[str, Any]:
-    file_path: str = ctx.event.data["file_path"]
+async def rag_ingest_pdf(**kwargs) -> dict[str, Any]:
+    step = kwargs["step"]
+    event = kwargs["event"]
+    file_path: str = event.data["file_path"]
 
     # Step 1: Load and chunk the PDF
     chunks = await step.run(
@@ -368,8 +372,10 @@ async def rag_ingest_pdf(ctx: inngest.Context, step: inngest.Step) -> dict[str, 
         period=60 * 1000,  # 1 minute in milliseconds
     ),
 )
-async def rag_query_pdf_ai(ctx: inngest.Context, step: inngest.Step) -> dict[str, Any]:
-    question: str = ctx.event.data["question"]
+async def rag_query_pdf_ai(**kwargs) -> dict[str, Any]:
+    step = kwargs["step"]
+    event = kwargs["event"]
+    question: str = event.data["question"]
 
     # Step 1: Embed the question and search Qdrant
     async def search_context() -> list[dict]:
