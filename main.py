@@ -173,7 +173,8 @@ async def inngest_observability_middleware(request: Request, call_next):
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 class IngestRequest(BaseModel):
-    file_path: str  # absolute path to the PDF on the server
+    filename: str
+    file_b64: str  # Base64 encoded PDF file content
 
 class QueryRequest(BaseModel):
     question: str
@@ -229,13 +230,16 @@ async def ingest_pdf(body: IngestRequest):
     event_ids = await inngest_client.send(
         inngest.Event(
             name="rag/ingest_pdf",
-            data={"file_path": body.file_path},
+            data={
+                "filename": body.filename,
+                "file_b64": body.file_b64,
+            },
         )
     )
     return {
         "status": "queued",
         "event_id": event_ids[0] if event_ids else None,
-        "message": f"Ingestion started for '{body.file_path}'. Track on Inngest dashboard.",
+        "message": f"Ingestion started for '{body.filename}'. Track on Inngest dashboard.",
         "dashboard": "http://localhost:8288",
     }
 
@@ -331,21 +335,36 @@ async def api_error_alert(ctx: inngest.Context, **kwargs) -> dict:
     rate_limit=inngest.RateLimit(
         limit=1,
         period=14400 * 1000,  # 4 hours in milliseconds
-        key="event.data.file_path",
+        key="event.data.filename",
     ),
 )
 async def rag_ingest_pdf(ctx: inngest.Context, **kwargs) -> dict[str, Any]:
     step = getattr(ctx, "step", kwargs.get("step"))
     event = getattr(ctx, "event", kwargs.get("event"))
-    file_path: str = event.data["file_path"]
+    filename: str = event.data["filename"]
+    file_b64: str = event.data["file_b64"]
 
-    # Step 1: Load and chunk the PDF
+    # Step 1: Write base64 to a local temporary file for LlamaIndex to process
+    async def write_temp_file() -> str:
+        import base64
+        import tempfile
+        import os
+        
+        file_bytes = base64.b64decode(file_b64)
+        fd, path = tempfile.mkstemp(suffix=".pdf")
+        with os.fdopen(fd, 'wb') as f:
+            f.write(file_bytes)
+        return path
+
+    local_path = await step.run("write-temp-file", write_temp_file)
+
+    # Step 2: Load and chunk the PDF
     chunks = await step.run(
         "load-and-chunk",
-        lambda: load_and_chunk_pdf(file_path),
+        lambda: load_and_chunk_pdf(local_path),
     )
 
-    # Step 2: Embed and upsert into Qdrant
+    # Step 3: Embed and upsert into Qdrant
     async def embed_and_upsert() -> dict:
         texts = [c["text"] for c in chunks]
         vectors = embed_text(texts)

@@ -208,9 +208,9 @@ def get_collections() -> list:
     except Exception:
         return []
 
-def local_send_ingest(file_path: str) -> str | None:
+def local_send_ingest(filename: str, file_b64: str) -> str | None:
     try:
-        r = requests.post(f"{BACKEND_URL}/api/ingest", json={"file_path": file_path}, timeout=10)
+        r = requests.post(f"{BACKEND_URL}/api/ingest", json={"filename": filename, "file_b64": file_b64}, timeout=10)
         r.raise_for_status()
         return r.json().get("event_id")
     except Exception as e:
@@ -323,11 +323,12 @@ with col_left:
                         st.markdown(badge("Error", "badge-error"), unsafe_allow_html=True)
                         st.error(f"Ingestion failed: {e}")
             else:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                    tmp.write(uploaded_file.read())
-                    tmp_path = tmp.name
+                import base64
+                file_bytes = uploaded_file.read()
+                file_b64 = base64.b64encode(file_bytes).decode("utf-8")
+                
                 with st.spinner("Sending event to Inngest…"):
-                    event_id = local_send_ingest(tmp_path)
+                    event_id = local_send_ingest(uploaded_file.name, file_b64)
                 if event_id:
                     st.markdown(badge("Ingestion Running", "badge-running"), unsafe_allow_html=True)
                     st.info(f"📡 Event ID: `{event_id}`  |  [View on Dashboard]({INNGEST_DEV_URL})")
