@@ -239,9 +239,19 @@ def poll_run_result(event_id: str) -> dict | None:
             run = runs[0]
             status = run.get("status", "")
             if status == "Completed":
-                return {"status": "success", "data": json.loads(run.get("output", "{}"))}
+                output = run.get("output", {})
+                # If output is already a dict, don't try to json.loads it
+                if isinstance(output, str):
+                    try:
+                        output = json.loads(output)
+                    except Exception:
+                        pass
+                return {"status": "success", "data": output}
             elif status in ("Failed", "Cancelled"):
-                return {"status": "error", "message": run.get("output", "Unknown error")}
+                output = run.get("output", "Unknown error")
+                if isinstance(output, dict):
+                    output = json.dumps(output)
+                return {"status": "error", "message": output}
         except Exception:
             pass
     return {"status": "timeout", "message": "Run timed out. Check the Inngest dashboard."}
