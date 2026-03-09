@@ -77,16 +77,24 @@ app.add_middleware(
 # Fires Inngest events for EVERY request: received + completed/errored
 # This gives you a full trace of all API traffic in the Inngest dashboard.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SKIP_MONITORING_PATHS = {"/api/inngest", "/docs", "/openapi.json", "/redoc", "/favicon.ico"}
+SKIP_MONITORING_PATHS = {
+    "/api/inngest",
+    "/api/health",
+    "/api/collections",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+    "/favicon.ico"
+}
 
 
 @app.middleware("http")
 async def inngest_observability_middleware(request: Request, call_next):
-    """Emit Inngest events for every inbound API request."""
+    """Emit Inngest events for inbound API requests."""
     path = request.url.path
 
-    # Skip Inngest's own route and docs to avoid infinite loops
-    if path in SKIP_MONITORING_PATHS:
+    # Skip health checks, docs, Inngest syncs, and random internet bot crawler noise
+    if path in SKIP_MONITORING_PATHS or not path.startswith("/api/"):
         return await call_next(request)
 
     async def safe_send_event(event: inngest.Event):
