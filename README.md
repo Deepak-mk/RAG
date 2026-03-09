@@ -1,26 +1,38 @@
 # RAG POC — Quick Start Guide
 
-A production-like RAG pipeline using **FastAPI**, **Inngest**, **LlamaIndex**, **Qdrant**, **OpenAI GPT-4o-mini**, and **Streamlit**.
+A production-grade **Retrieval-Augmented Generation (RAG)** pipeline using **FastAPI**, **Inngest**, **LlamaIndex**, **Qdrant**, **Groq (Llama 3.3)**, and **Streamlit**.
+
+## Tech Stack
+| Component | Technology |
+|-----------|-----------|
+| API Server | FastAPI |
+| Orchestration| Inngest (Workflows, Observability, Proxy Polling) |
+| Vector DB | Qdrant (via Docker) |
+| Chunking | LlamaIndex SentenceSplitter |
+| Embeddings | `all-MiniLM-L6-v2` (SentenceTransformers - Local) |
+| LLM | Groq `llama-3.3-70b-versatile` |
+| Frontend | Streamlit (Dark Glassmorphism UI) |
+
+---
 
 ## Prerequisites
-| Tool | Purpose |
-|------|---------|
-| Python 3.10+ | Runtime |
-| Docker Desktop | Qdrant vector DB |
-| Node.js (v18+) | Inngest dev server |
-| Groq API Key | LLM inference (llama-3.3-70b-versatile) |
+1. **Python 3.10+**
+2. **Docker Desktop** (for Qdrant)
+3. **Node.js** (for Inngest Dev Server)
+4. **Groq API Key** ([Get it here](https://console.groq.com))
 
 ---
 
 ## Setup
 
 ### 1. Environment
+Copy the template and add your credentials:
 ```bash
 cp .env.template .env
-# Edit .env and paste your OPENAI_API_KEY
+# Edit .env and paste your GROQ_API_KEY
 ```
 
-### 2. Python virtual environment
+### 2. Python Virtual Environment
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -39,14 +51,15 @@ docker-compose up -d
 
 Open **3 terminals** in the project folder with the venv activated:
 
-**Terminal 1 — FastAPI backend**
+**Terminal 1 — FastAPI Backend**
 ```bash
 source .venv/bin/activate
 uvicorn main:app --reload --port 8000
 ```
 
-**Terminal 2 — Inngest dev server**
+**Terminal 2 — Inngest Dev Server**
 ```bash
+# Point to your local FastAPI endpoint
 npx inngest-cli@latest dev -u http://127.0.0.1:8000/api/inngest
 # Dashboard: http://localhost:8288
 ```
@@ -54,35 +67,30 @@ npx inngest-cli@latest dev -u http://127.0.0.1:8000/api/inngest
 **Terminal 3 — Streamlit UI**
 ```bash
 source .venv/bin/activate
-streamlit run streamlit_app.py --server.port 8501
+streamlit run streamlit_app.py
 # UI: http://localhost:8501
 ```
 
 ---
 
-## Usage
+## Observability & Inspection
 
-1. Open `http://localhost:8501` in your browser.
-2. Upload a PDF → click **Start Ingestion** and watch the Inngest dashboard trace the steps.
-3. Once ingestion is complete, type a question → click **Get Answer**.
-4. The answer (grounded in the PDF context) will appear within seconds.
+### Qdrant Dashboard
+Visualize your stored vectors and metadata at **[http://localhost:6333/dashboard](http://localhost:6333/dashboard)**.
+
+### Database Inspection Tool
+Run the included utility to see exactly what's inside your local Qdrant:
+```bash
+source .venv/bin/activate
+python inspect_db.py
+```
 
 ---
 
-## Architecture
+## Architecture Flow
 
-```
-Streamlit UI
-    │
-    │  POST  /api/inngest  (send events)
-    ▼
-FastAPI + Inngest Server
-    ├── rag/ingest_pdf  ─────► LlamaIndex (chunk) → OpenAI (embed) → Qdrant (store)
-    └── rag/query_pdf_ai ────► OpenAI (embed query) → Qdrant (search) → GPT-4o-mini (answer)
-```
-
-## Production Toggle
-Set `INNGEST_PRODUCTION=true` in `.env` and configure `INNGEST_EVENT_KEY` to switch to Inngest's managed cloud.
+1. **Ingestion**: `Streamlit` → `FastAPI` → `Inngest Event` → `LlamaIndex` (Chunk) → `Local Model` (Embed) → `Qdrant` (Store).
+2. **Querying**: `Streamlit` → `FastAPI` → `Inngest Event` → `Search Qdrant` → `Context` + `Question` → `Groq LLM` → `Answer`.
 
 ---
 
@@ -92,9 +100,10 @@ Experiment1/
 ├── main.py            # FastAPI app + Inngest workflows
 ├── customtypes.py     # Pydantic type models
 ├── vector_db.py       # Qdrant client (QuadrantStorage)
-├── data_loader.py     # PDF chunking + OpenAI embedding
+├── data_loader.py     # PDF chunking + Local embeddings
 ├── streamlit_app.py   # Streamlit frontend
-├── docker-compose.yml # Qdrant service
+├── inspect_db.py      # CLI utility to see database points
+├── docker-compose.yml # Qdrant service configuration
 ├── requirements.txt   # Python dependencies
-└── .env               # API keys (not committed)
+└── .env               # Secrets (not committed)
 ```
