@@ -22,12 +22,13 @@ CHUNK_OVERLAP = 200
 _embedding_model = SentenceTransformer(EMBEDDING_MODEL)
 
 
-def load_and_chunk_pdf(file_path: str) -> List[RagChunkAndSrc]:
+def load_and_chunk_pdf(file_path: str, original_filename: str | None = None) -> List[RagChunkAndSrc]:
     """
     Load a PDF and split it into overlapping text chunks.
 
     Args:
         file_path: Absolute or relative path to the PDF file.
+        original_filename: Optional name to use for the 'source' metadata.
 
     Returns:
         List of RagChunkAndSrc objects containing text and source info.
@@ -38,7 +39,7 @@ def load_and_chunk_pdf(file_path: str) -> List[RagChunkAndSrc]:
     splitter = SentenceSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
     nodes = splitter.get_nodes_from_documents(documents)
 
-    source_name = os.path.basename(file_path)
+    source_name = original_filename or os.path.basename(file_path)
     chunks = [
         RagChunkAndSrc(
             text=node.get_content(),

@@ -209,16 +209,38 @@ async def list_collections():
     List all Qdrant collections with point counts.
     Useful for monitoring ingested document volumes.
     """
-    collections = get_db().client.get_collections().collections
-    details = []
-    for col in collections:
-        info = get_db().client.get_collection(col.name)
-        details.append({
-            "name": col.name,
-            "vectors_count": info.vectors_count,
-            "status": str(info.status),
-        })
-    return {"collections": details}
+    try:
+        collections = get_db().client.get_collections().collections
+        details = []
+        for col in collections:
+            info = get_db().client.get_collection(col.name)
+            # qdrant-client v1.17+ uses points_count, not vectors_count
+            count = getattr(info, "points_count", getattr(info, "vectors_count", 0))
+            details.append({
+                "name": col.name,
+                "vectors_count": count,
+                "status": str(info.status),
+            })
+        return {"collections": details}
+    except Exception as e:
+        print(f"[api] Error listing collections: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/inngest/runs/{event_id}", tags=["Monitoring"])
+async def get_inngest_runs(event_id: str):
+    """
+    Proxy endpoint to poll for Inngest run status from a local dev server.
+    This allows Streamlit Cloud (via ngrok) to check run status without 
+    needing direct access to the local Inngest port.
+    """
+    import requests
+    dev_server_url = os.getenv("INNGEST_DEV_URL", "http://127.0.0.1:8288")
+    try:
+        r = requests.get(f"{dev_server_url}/v1/events/{event_id}/runs", timeout=5)
+        return r.json()
+    except Exception as e:
+        return {"data": [], "error": str(e)}
 
 
 @app.post("/api/ingest", tags=["RAG"])
@@ -339,6 +361,7 @@ async def rag_ingest_pdf(ctx: inngest.Context, **kwargs) -> dict[str, Any]:
     event = getattr(ctx, "event", kwargs.get("event"))
     filename: str = event.data["filename"]
     file_b64: str = event.data["file_b64"]
+    print(f"[inngest] Starting ingestion for: {filename}")
 
     # Step 1: Write base64 to a local temporary file for LlamaIndex to process
     async def write_temp_file() -> str:
@@ -356,7 +379,9 @@ async def rag_ingest_pdf(ctx: inngest.Context, **kwargs) -> dict[str, Any]:
 
     # Step 2: Load and chunk the PDF
     async def chunk_pdf() -> list[dict]:
-        raw_chunks = load_and_chunk_pdf(local_path)
+        # Pass the original filename to preserve it in the metadata
+        raw_chunks = load_and_chunk_pdf(local_path, original_filename=filename)
+        print(f"[inngest] Chunked '{filename}' into {len(raw_chunks)} pieces.")
         # Inngest step outputs MUST be JSON serializable, so convert Pydantic to dicts
         return [c.model_dump() for c in raw_chunks]
 

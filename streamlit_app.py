@@ -230,7 +230,7 @@ def poll_run_result(event_id: str) -> dict | None:
     for _ in range(MAX_POLL_ATTEMPTS):
         time.sleep(POLL_INTERVAL_SEC)
         try:
-            resp = requests.get(f"{INNGEST_DEV_URL}/v1/events/{event_id}/runs", timeout=5)
+            resp = requests.get(f"{BACKEND_URL}/api/inngest/runs/{event_id}", timeout=5)
             if resp.status_code != 200:
                 continue
             runs = resp.json().get("data", [])
