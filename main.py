@@ -74,18 +74,9 @@ app.add_middleware(
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # OBSERVABILITY MIDDLEWARE
-# Fires Inngest events for EVERY request: received + completed/errored
-# This gives you a full trace of all API traffic in the Inngest dashboard.
+# Fires Inngest events for RAG requests: received + completed/errored
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SKIP_MONITORING_PATHS = {
-    "/api/inngest",
-    "/api/health",
-    "/api/collections",
-    "/docs",
-    "/openapi.json",
-    "/redoc",
-    "/favicon.ico"
-}
+MONITORED_PATHS = {"/api/ingest", "/api/query"}
 
 
 @app.middleware("http")
@@ -93,8 +84,8 @@ async def inngest_observability_middleware(request: Request, call_next):
     """Emit Inngest events for inbound API requests."""
     path = request.url.path
 
-    # Skip health checks, docs, Inngest syncs, and random internet bot crawler noise
-    if path in SKIP_MONITORING_PATHS or not path.startswith("/api/"):
+    # Only monitor actual RAG endpoints to prevent public internet bot noise
+    if path not in MONITORED_PATHS:
         return await call_next(request)
 
     async def safe_send_event(event: inngest.Event):
