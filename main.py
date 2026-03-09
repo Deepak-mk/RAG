@@ -329,7 +329,7 @@ async def api_error_alert(ctx: inngest.Context, step: inngest.Step) -> dict:
     trigger=inngest.TriggerEvent(event="rag/ingest_pdf"),
     rate_limit=inngest.RateLimit(
         limit=1,
-        period=14400,  # 4 hours in seconds
+        period=14400 * 1000,  # 4 hours in milliseconds
         key="event.data.file_path",
     ),
 )
@@ -366,7 +366,7 @@ async def rag_ingest_pdf(ctx: inngest.Context, step: inngest.Step) -> dict[str, 
     trigger=inngest.TriggerEvent(event="rag/query_pdf_ai"),
     throttle=inngest.Throttle(
         limit=10,
-        period=60,  # 1 minute in seconds
+        period=60 * 1000,  # 1 minute in milliseconds
     ),
 )
 async def rag_query_pdf_ai(ctx: inngest.Context, step: inngest.Step) -> dict[str, Any]:
