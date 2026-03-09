@@ -276,13 +276,14 @@ async def query_pdf(body: QueryRequest):
     fn_id="api-monitor",
     trigger=inngest.TriggerEvent(event="api/request.completed"),
 )
-async def api_monitor(ctx: inngest.Context, step: inngest.Step) -> dict:
+async def api_monitor(ctx: inngest.Context, **kwargs) -> dict:
     """
     Receives every completed API request event.
     In production you'd write to a metrics store (Datadog, Prometheus, etc.).
     Here it provides a searchable trace in the Inngest dashboard.
     """
-    data = ctx.event.data
+    event = getattr(ctx, "event", kwargs.get("event"))
+    data = event.data
     log_entry = {
         "request_id": data.get("request_id"),
         "method": data.get("method"),
