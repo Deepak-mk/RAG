@@ -29,9 +29,9 @@ GROQ_API_KEY = _get_secret("GROQ_API_KEY")
 QDRANT_URL   = _get_secret("QDRANT_URL")
 QDRANT_API_KEY = _get_secret("QDRANT_API_KEY")
 
-# If QDRANT_URL is set → cloud mode; otherwise → local API mode
-IS_CLOUD = bool(QDRANT_URL)
-
+# We force IS_CLOUD to False so Streamlit ALWAYS routes through the FastAPI backend.
+# This ensures that Inngest observability is always triggered, exactly like the tutorial video.
+IS_CLOUD = False
 BACKEND_URL    = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 INNGEST_DEV_URL = os.getenv("INNGEST_DEV_URL", "http://127.0.0.1:8288")
 POLL_INTERVAL_SEC = 2
