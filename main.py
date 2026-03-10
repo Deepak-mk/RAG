@@ -465,7 +465,53 @@ async def rag_query_pdf_ai(ctx: inngest.Context, **kwargs) -> dict[str, Any]:
             "model": "llama-3.3-70b-versatile",
         }
 
-    return await step.run("generate-answer", generate_answer)
+    answer_result = await step.run("generate-answer", generate_answer)
+
+    # Step 3: Call Groq LLM as a Judge to evaluate hallucination
+    async def evaluate_hallucination() -> dict:
+        context_text = "\n\n".join(
+            f"[Source: {r['source']}]\n{r['text']}" for r in search_results
+        )
+        answer = answer_result["answer"]
+        
+        eval_prompt = f"""
+You are a strict Hallucination Grader for a Retrieval-Augmented Generation (RAG) system.
+Your job is to act like a Lynx evaluation model and determine if the generated answer is faithful to the provided context.
+
+Context:
+{context_text}
+
+Generated Answer:
+{answer}
+
+Instructions:
+1. Carefully check if ANY factual claim made in the generated answer goes beyond what is explicitly stated in the context.
+2. If the answer states that the information is not in the context, this is NOT a hallucination (it is faithful).
+3. Provide a brief reasoning explaining your verdict.
+4. Output exactly ONE line at the very end formatted as "Verdict: [True/False]". True means it CONTAINS hallucinations (unsupported facts). False means it is FAITHFUL.
+
+Reasoning and Verdict:
+"""
+        completion = get_groq_client().chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": eval_prompt}],
+            temperature=0.0,
+            max_tokens=256,
+        )
+        
+        response_text = completion.choices[0].message.content.strip()
+        last_line = response_text.split("\n")[-1].strip().lower()
+        is_hallucinated = "true" in last_line
+        
+        return {
+            "is_hallucinated": is_hallucinated,
+            "reasoning": response_text
+        }
+
+    eval_result = await step.run("evaluate-hallucination", evaluate_hallucination)
+
+    answer_result["evaluation"] = eval_result
+    return answer_result
 
 
 # ─── Mount Inngest serve route ────────────────────────────────────────────────

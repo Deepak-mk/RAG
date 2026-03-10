@@ -43,6 +43,9 @@ start() {
     if ! pgrep -f "streamlit run streamlit_app.py" > /dev/null; then
         echo "Starting Streamlit on port $STREAMLIT_PORT..."
         source "$VENV_PATH"
+        export STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+        export STREAMLIT_SERVER_HEADLESS=true
+        export BACKEND_URL="http://127.0.0.1:$FASTAPI_PORT"
         nohup streamlit run streamlit_app.py --server.port $STREAMLIT_PORT --server.address 0.0.0.0 > "$STREAMLIT_LOG" 2>&1 &
     else
         echo "Streamlit is already running."

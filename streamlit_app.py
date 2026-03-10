@@ -405,6 +405,21 @@ with col_right:
                         st.markdown(badge("✅ Complete", "badge-success"), unsafe_allow_html=True)
                         st.markdown("**Answer:**")
                         st.markdown(f'<div class="answer-box">{data["answer"]}</div>', unsafe_allow_html=True)
+                        
+                        # Display Hallucination Evaluation (RAGAS/Lynx style)
+                        eval_data = data.get("evaluation")
+                        if eval_data:
+                            is_hallucinated = eval_data.get("is_hallucinated", False)
+                            reasoning = eval_data.get("reasoning", "No reasoning provided.")
+                            
+                            if is_hallucinated:
+                                st.markdown(badge("⚠️ Potential Hallucination", "badge-error"), unsafe_allow_html=True)
+                            else:
+                                st.markdown(badge("🛡️ Verified Contextual", "badge-success"), unsafe_allow_html=True)
+                                
+                            with st.expander("Show Judge's Reasoning"):
+                                st.write(reasoning)
+
                         if data.get("sources"):
                             unique_sources = list(dict.fromkeys(data["sources"]))
                             st.markdown("**Sources:** " + " · ".join(f"`{s}`" for s in unique_sources))
